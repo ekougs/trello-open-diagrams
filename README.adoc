@@ -1,0 +1,7 @@
+= Trello Open Diagrams
+
+== Trello app key
+Define your TRELLO_APP_KEY as an environment variable
+
+== Run app locally
+npm run dev-server
