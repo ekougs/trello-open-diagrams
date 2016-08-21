@@ -1,5 +1,6 @@
 import moment from "moment/src/moment";
 import * as _ from "lodash/lodash";
+import DateService from "./date.service";
 
 let $script = require('scriptjs');
 // Only events that add card in a list
@@ -11,6 +12,10 @@ let cardMovementEvents = ['updateCard:idList',
 let formattedCardMovementEvents = cardMovementEvents.join(',');
 
 export default class BoardService {
+  constructor() {
+    this.dateService = new DateService();
+  }
+
   getBoards() {
     let boardsDeferred = m.deferred();
     _loadBoards();
@@ -47,6 +52,7 @@ export default class BoardService {
 
   getCardCountsByDateByListSince(boardId, since, listIds) {
     since = since.format('YYYY-MM-DDTHH:mm:ss.SSS') + 'Z';
+    let dateService = this.dateService;
     let cardCountsByDateByListSinceDeferred = m.deferred();
     _countCardsByDateByListSince(boardId, since, listIds);
     return cardCountsByDateByListSinceDeferred.promise;
@@ -58,7 +64,7 @@ export default class BoardService {
                      let uniqueSortedCardMoves = _getUniqueSortedCardMoves(rawCardMoves);
                      let cardsCountsByDateListCombinedKey = _countCardsByDateListCombinedKey(uniqueSortedCardMoves);
                      let cardsCountsByDateByList =
-                       _getCardsCountsByDateByList(uniqueSortedCardMoves, cardsCountsByDateListCombinedKey, listIds);
+                       _getWeeklyCumulativeCounts(uniqueSortedCardMoves, cardsCountsByDateListCombinedKey, listIds);
                      _resolve(cardCountsByDateByListSinceDeferred, cardsCountsByDateByList);
 
                    },
@@ -97,29 +103,48 @@ export default class BoardService {
       return cardsCountByListIdAndDate;
     }
 
-    function _getCardsCountsByDateByList(uniqueSortedCardMoves, cardsCountsByDateListCombinedKey, listIds) {
+    function _getWeeklyCumulativeCounts(uniqueSortedCardMoves, cardsCountsByDateListCombinedKey, listIds) {
       let cardMovesDatesInMs = uniqueSortedCardMoves.map(cardMove => cardMove.dateInMs);
       cardMovesDatesInMs = _.uniq(cardMovesDatesInMs);
       let sortedUniqueCardMovesDatesInMs = _.sortBy(cardMovesDatesInMs);
-      let cardsCountsByDateByList = {};
+      let sinceDate = _.min(sortedUniqueCardMovesDatesInMs);
+      let endOfWeeks = dateService.getEndOfWeeks(sinceDate);
+      let cumulativeCountByList = {};
       // 2 forEach level as we need every list cards count for each date
-      sortedUniqueCardMovesDatesInMs.forEach(cardMovesDateInMs => {
-        listIds.forEach(listId => _setCumulativeCount(cardMovesDateInMs, listId));
+      endOfWeeks.forEach(endOfWeekInMs => {
+        listIds.forEach(listId => _setCumulativeCount(endOfWeekInMs, listId, cardsCountsByDateListCombinedKey));
       });
-      return cardsCountsByDateByList;
+      return _.merge(cumulativeCountByList, {endOfWeeks: endOfWeeks});
 
-      function _setCumulativeCount(cardMovesDateInMs, listId) {
+      function _setCumulativeCount(endOfWeekInMs, listId, cardsCountsByDateListCombinedKey) {
         // To get the cumulative count, we need the previous count for the list
-        let currentDateIdx = sortedUniqueCardMovesDatesInMs.indexOf(cardMovesDateInMs);
-        let previousCount = 0;
-        if (currentDateIdx > 0) {
-          let previousDateInMs = sortedUniqueCardMovesDatesInMs[currentDateIdx - 1];
-          previousCount = cardsCountsByDateByList[previousDateInMs][listId];
+        let previousCount = _getPreviousCumulativeCount(listId);
+        // Get the week cumulative count
+        cumulativeCountByList[listId] = cumulativeCountByList[listId] || [];
+        let weeklyCumulativeCount =
+          previousCount + _getCountCumulativeInWeek(listId, endOfWeekInMs, cardsCountsByDateListCombinedKey);
+        cumulativeCountByList[listId].push(weeklyCumulativeCount);
+      }
+
+      function _getPreviousCumulativeCount(listId) {
+        let listCumulativeCounts = cumulativeCountByList[listId];
+        if (listCumulativeCounts) {
+          return listCumulativeCounts[listCumulativeCounts.length - 1];
         }
-        // If there is a card count at date, we get it
-        let cardCountAtDate = cardsCountsByDateListCombinedKey[_getDateListCombinedKey(cardMovesDateInMs, listId)];
-        cardsCountsByDateByList[cardMovesDateInMs] = cardsCountsByDateByList[cardMovesDateInMs] || {};
-        cardsCountsByDateByList[cardMovesDateInMs][listId] = previousCount + (cardCountAtDate ? cardCountAtDate : 0);
+        return 0;
+      }
+
+      function _getCountCumulativeInWeek(listId, endOfWeekInMs, cardsCountsByDateListCombinedKey) {
+        let cardsMovesCountsInWeek = 0;
+        let lastUsedCardMoveDateIndex = 0;
+        while (sortedUniqueCardMovesDatesInMs[lastUsedCardMoveDateIndex] < endOfWeekInMs) {
+          let cardMoveDateInMs = sortedUniqueCardMovesDatesInMs[lastUsedCardMoveDateIndex];
+          cardsMovesCountsInWeek +=
+            cardsCountsByDateListCombinedKey[_getDateListCombinedKey(cardMoveDateInMs, listId)];
+          lastUsedCardMoveDateIndex++;
+        }
+        sortedUniqueCardMovesDatesInMs.splice(0, lastUsedCardMoveDateIndex);
+        return cardsMovesCountsInWeek;
       }
     }
   }

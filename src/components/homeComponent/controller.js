@@ -1,7 +1,6 @@
 import VM from "./viewModel";
 import BoardService from "models/board.service";
 import moment from "moment/src/moment";
-import * as _ from "lodash/lodash";
 import randomColor from "randomcolor/randomColor";
 
 export default class Controller {
@@ -27,13 +26,11 @@ export default class Controller {
       let moment6MonthsAgo = moment().subtract(6, 'M');
       let boardListIds = boardLists.map(boardList => boardList.id);
       boardService.getCardCountsByDateByListSince(selectedBoardId, moment6MonthsAgo, boardListIds)
-                  .then(boardCardCountsByDateByList => {
-                    let weeklyCumulativeCounts = _getWeeklyCumulativeCounts(boardCardCountsByDateByList);
-
-                    let orderedDatesInMs =
-                      _.orderBy(_.keys(weeklyCumulativeCounts).map(dateInMs => Number(dateInMs)));
+                  .then(weeklyCumulativeCounts => {
                     // Graph labels
-                    vm.boardCumulativeDates(orderedDatesInMs.map(dateInMs => moment(dateInMs).format('DD-MM-Y')));
+                    let formattedEndOfWeeks =
+                      weeklyCumulativeCounts.endOfWeeks.map(dateInMs => moment(dateInMs).format('DD-MM-Y'));
+                    vm.boardCumulativeDates(formattedEndOfWeeks);
                     // Graph data
                     let colors = randomColor({
                                                luminosity: 'random',
@@ -50,49 +47,12 @@ export default class Controller {
                         pointStyle: 'line',
                         data: []
                       };
-                      orderedDatesInMs.forEach(dateInMs => {
-                        dataSet.data.push(weeklyCumulativeCounts[dateInMs][listId]);
-                      });
+                      dataSet.data = weeklyCumulativeCounts[listId];
                       return dataSet;
                     });
                     vm.boardCumulativeDataSets(dataSets);
                     vm.boardCumulativeDataReady(true);
                   });
-    }
-
-    function _getWeeklyCumulativeCounts(boardCardCountsByDateByList) {
-      // First we sample end of weeks from sinceDate to today
-      let cardCountsDates = _.orderBy(_.keys(boardCardCountsByDateByList).map(dateInMs => Number(dateInMs)));
-      let sinceDate = _.min(cardCountsDates);
-      let endOfWeeksInMs = _getEndOfWeeksInMs(sinceDate);
-      let completeCumulativeCounts = {};
-      endOfWeeksInMs.forEach(endOfWeekInMs => {
-        completeCumulativeCounts[endOfWeekInMs] =
-          _getNearestCardsCounts(endOfWeekInMs, boardCardCountsByDateByList, cardCountsDates)
-      });
-
-      return completeCumulativeCounts;
-    }
-
-    function _getEndOfWeeksInMs(sinceDate) {
-      let endOfFirstWeek = moment(sinceDate).endOf('week').startOf('day');
-      let endDate = moment().startOf('day');
-      let endOfWeeks = [];
-      let currentEndOfWeek = endOfFirstWeek;
-      while (currentEndOfWeek.isBefore(endDate)) {
-        // To copy the date as current mutates
-        endOfWeeks.push(moment(currentEndOfWeek.valueOf()));
-        // This mutates the date
-        currentEndOfWeek.add(1, 'w');
-      }
-      return endOfWeeks.map(endOfWeek => endOfWeek.valueOf());
-    }
-
-    function _getNearestCardsCounts(endOfWeek, boardCardCountsByDateByList, cardCountsDates) {
-      if (endOfWeek > cardCountsDates[1]) {
-        cardCountsDates.splice(0, 1);
-      }
-      return boardCardCountsByDateByList[cardCountsDates[0]];
     }
   }
 }
