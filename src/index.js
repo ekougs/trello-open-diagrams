@@ -1,7 +1,7 @@
 import homeComponent from "components/homeComponent/index";
 
-var $script = require('scriptjs');
-var trelloAPIUrl = 'https://api.trello.com/1/client.js?key=' + TRELLO_APP_KEY;
+let $script = require('scriptjs');
+let trelloAPIUrl = 'https://api.trello.com/1/client.js?key=' + TRELLO_APP_KEY;
 
 $script(['http://code.jquery.com/jquery-1.7.1.min.js', trelloAPIUrl], 'trello');
 
@@ -27,12 +27,12 @@ require('./index.html?output=index.html');
 /*===== yeoman style require hook =====*/
 
 function lazyLoad() {
-  var onload = window.onload || function () {
+  let onload = window.onload || function () {
     };
   window.onload = function () {
-    var currentRoute = m.route();
+    let currentRoute = m.route();
     Object.keys(routes).forEach(function (key) {
-      var route = routes[key];
+      let route = routes[key];
       if (key !== currentRoute) {
         route.controller();
       }
@@ -41,7 +41,7 @@ function lazyLoad() {
   }
 }
 
-var routes = {
+let routes = {
   /*===== yeoman hook =====*/
   '/': homeComponent
 };

@@ -31,11 +31,11 @@ module.exports = {
   ],
   module: {
     loaders: [
-      // ES6 transpi  ler
+      // ES6 transpiler
       {
         test: /\.js$/,
         loader: 'babel',
-        exclude: /(node_modules|bower_components)/
+        exclude: /(node_modules|bower_components\/(?!rxjs-es|moment))/
       },
       /*===== yeoman sass hook end =====*/
       // Static files
