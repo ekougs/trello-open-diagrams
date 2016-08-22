@@ -5,7 +5,6 @@ export default class VM {
     vm.boardLists = m.prop([]);
     vm.boardCumulativeDates = m.prop([]);
     vm.boardCumulativeDataSets = m.prop([]);
-    vm.boardCumulativeDataReady = m.prop(false);
     return vm;
   }
 };

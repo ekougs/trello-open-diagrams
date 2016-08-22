@@ -5,6 +5,11 @@ export default function (ctrl) {
   let vm = ctrl.vm;
   let boardSelectionForm =
       m('form.bs-component',
+        {
+          onsubmit: function () {
+            return false;
+          }
+        },
         [m(boardSelectionComponent, {
           onSelectedBoard: ctrl.loadDiagrams.bind(ctrl),
           boardService: ctrl.boardService
@@ -14,7 +19,6 @@ export default function (ctrl) {
            [
              dashboardRow(boardSelectionForm, 4),
              dashboardRow(m('.mirror', formatSelectedBoard(vm.selectedBoard()))),
-             dashboardRow(m('.lists', formatSelectedBoardLists(vm.boardLists()))),
              dashboardRow(m('.cumulative-flow-diagram', createDiagram(vm)))
            ]);
 
@@ -25,11 +29,7 @@ export default function (ctrl) {
   }
 
   function formatSelectedBoard(selectedBoard) {
-    return selectedBoard && selectedBoard.id ? 'Board: ' + selectedBoard.name : '';
-  }
-
-  function formatSelectedBoardLists(selectedBoardLists) {
-    return selectedBoardLists.map((list) => m('.list', formatList(list)));
+    return selectedBoard && selectedBoard.id ? selectedBoard.name : '';
   }
 
   function formatList(list) {
@@ -37,22 +37,19 @@ export default function (ctrl) {
   }
 
   function createDiagram() {
-    if (vm.boardCumulativeDataReady()) {
-      return m('canvas[cum_flw_diagram_' + vm.selectedBoard().id + ']',
-               {
-                 config: function drawCumulativeFlowDiagram(element, isInitialized, context) {
-                   if (isInitialized) {
-                     return;
-                   }
-                   console.log(vm.boardCumulativeDates());
-                   Chart.Line(element, {
-                     data: {
-                       labels: vm.boardCumulativeDates(),
-                       datasets: vm.boardCumulativeDataSets()
-                     }
-                   });
-                 }
-               });
+    if (!vm.boardCumulativeDataSets() || vm.boardCumulativeDataSets().length == 0) {
+      return;
     }
+    return m('canvas[cum_flw_diagram_' + vm.selectedBoard().id + ']',
+             {
+               config: function drawCumulativeFlowDiagram(element, isInitialized, context) {
+                 Chart.Line(element, {
+                   data: {
+                     labels: vm.boardCumulativeDates(),
+                     datasets: vm.boardCumulativeDataSets()
+                   }
+                 });
+               }
+             });
   }
 }
