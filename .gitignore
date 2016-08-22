@@ -4,3 +4,5 @@
 .idea/
 *.iml
 npm-debug.log
+.DS_STORE
+coverage

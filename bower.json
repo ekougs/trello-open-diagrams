@@ -1,8 +1,13 @@
 {
-	"name": "package",
-	"version": "0.0.0",
-	"dependencies": {
-		"mithril": "~0.2.0",
-		"bootstrap-material-design": "0.5.10"
-	}
+  "name": "package",
+  "version": "0.0.0",
+  "dependencies": {
+    "mithril": "~0.2.0",
+    "bootstrap-material-design": "0.5.10",
+    "rxjs-es": "npm:rxjs-es#5.0.0-beta.11",
+    "chart.js": "npm:chart.js#2.2.1",
+    "moment": "2.14.1",
+    "lodash": "4.15.0",
+    "randomcolor": "0.4.4"
+  }
 }
